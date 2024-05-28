@@ -1,0 +1,2 @@
+LLMapReduce --mapper mapper.sh --input data/raw/all_accesible_metabolites_cleaned_names_remaining_15Jul2022.csv --output test_output/  --np=[14,4,10] --keep=true
+LLMapReduce --mapper mapper_red.sh --input data/raw/25Jul2022_predicted_red-NIR_absorbers_sorted.csv --output test_output/  --np=[2,4,12] --keep=true

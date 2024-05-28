@@ -1,0 +1,27 @@
+#!/bin/bash
+#SBATCH -e 20Jun_all_metabs.err
+#SBATCH -o 20Jun_all_metabs.out
+#SBATCH -t 1-00:00:00
+#SBATCH -p sched_mit_ccoley
+#SBATCH --mem 10000
+#SBATCH -N 1 
+#SBATCH -n 1 
+#SBATCH --cpus-per-task 1
+#SBATCH --nodelist=node1238
+
+module add anaconda3/2020.11
+source activate biospectral
+
+echo "Converting SMILES to Gaussian input files"
+bash db_to_gaussian_input.sh -d data/processed/all_accessible_metabolites/ --smiles-file data/raw/all_accessible_metabolites_from_ecoli_udpated_16Jun2022.csv
+
+echo "Moving completed molecules to different folder"
+BEFORE=$(ls data/processed/all_accessible_metabolites/already_run/*com | wc -l)
+grep Singlet data/tddft_outputs/all_accessible/*log > data/tddft_outputs/all_accessible/singlets.txt
+bash data/processed/move_done_files.sh -m data/processed/all_accessible_metabolites/already_run -s data/tddft_outputs/all_accessible/singlets.txt -f data/processed/all_accessible_metabolites/
+AFTER=$(ls data/processed/all_accessible_metabolites/already_run/*com | wc -l)
+
+echo "Moved $(expr $AFTER - $BEFORE) files"
+
+echo "Performing TDDFT Calculation"
+bash tddft_batched.sh -i data/processed/all_accessible_metabolites/ -o data/tddft_outputs/all_accessible -j 10
