@@ -4,7 +4,7 @@ import requests
 import re
 from tqdm import tqdm
 
-with open('brenda/scraped_brenda_substrate_results.json', 'r') as f:
+with open('../00_data/processed/brenda/scraped_brenda_substrate_results.json', 'r') as f:
     parsed_brenda = json.load(f)
 for ec in parsed_brenda.keys():
     parsed_brenda[ec] = pd.DataFrame(parsed_brenda[ec])
