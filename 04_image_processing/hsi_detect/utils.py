@@ -398,7 +398,7 @@ def reduce_pixel_dimensionality (list_of_pixels, dims=2, random_state=1):
                 pixels.append(p)
                 pixel_idxs.append(i)
     pixel_array = np.stack(pixels)
-    pca = PCA(n_components = dims, random_state=random_state)
+    pca = PCA(n_components = dims, random_state=random_state, svd_solver='full')
     reduced = pca.fit_transform(pixel_array)
     pca_reduced = reduced
     
@@ -498,7 +498,7 @@ def filter_out_endmembers_with_reference(endmember_ls, cluster_idx_ls, reference
 def cluster_based_extract_endmembers(img, n_clusters, 
                                      output_prefix=None, clustering_method=MiniBatchKMeans, 
                                      reduced_dims=10, return_cluster_idxs=False, 
-                                     return_flattened_img=False, norm=True):
+                                     return_flattened_img=False, norm=True, **kmeans_clustering_kwargs):
     
     img_flattened= np.reshape(img, (img.shape[0]*img.shape[1], img.shape[2]))
     if norm:
@@ -522,7 +522,7 @@ def cluster_based_extract_endmembers(img, n_clusters,
     all_cluster_idxs = []
     for c in n_clusters:
 
-        kmeans = clustering_method(n_clusters=c, random_state=1)
+        kmeans = clustering_method(n_clusters=c, random_state=1, **kmeans_clustering_kwargs)
         cluster_idxs = kmeans.fit_predict(pixel_array)
         
         reconstructed_cluster_idxs = np.zeros(len(img_flattened)) * np.nan
@@ -551,10 +551,11 @@ def cluster_based_extract_endmembers(img, n_clusters,
 def kmeans_hierarchical_extract_endmembers(img, output_prefix=None, clustering_method=MiniBatchKMeans,
                                            metric = 'cosine', linkage = 'average', distance_threshold = 0.005,
                                          reduced_dims=3, return_cluster_idxs=False, n_clusters = 1000,
-                                           filter_threshold = 0.9, reference_spec=None, norm=True
+                                           filter_threshold = 0.9, reference_spec=None, norm=True, **kmeans_clustering_kwargs
                                           ):        
 
-    em_ls, clust_ls, img_flattened = cluster_based_extract_endmembers(img, n_clusters, reduced_dims=reduced_dims, return_cluster_idxs=True, return_flattened_img=True, clustering_method=clustering_method, norm=norm)
+    em_ls, clust_ls, img_flattened = cluster_based_extract_endmembers(img, n_clusters, reduced_dims=reduced_dims, return_cluster_idxs=True, 
+                                                                      return_flattened_img=True, clustering_method=clustering_method, norm=norm, **kmeans_clustering_kwargs)
     em_ls, clust_ls = filter_out_endmembers_with_reference(em_ls, clust_ls, reference_spec, filter_threshold)
     
     #agglomerative cluster endmembers 
