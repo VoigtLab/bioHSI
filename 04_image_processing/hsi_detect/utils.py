@@ -372,9 +372,6 @@ def crop_rectangular (im_array, top_left, bottom_right):
     print (y_min, y_max, x_min, x_max)
     return im_array[y_min:y_max, x_min:x_max, :]
     
-
-import colour
-
 def gau(x, mu, sig1, sig2):
     p_1 = np.exp(-np.power(x - mu, 2.) / (2 * np.power(sig1, 2.)))
     p_2 = np.exp(-np.power(x - mu, 2.) / (2 * np.power(sig2, 2.)))
