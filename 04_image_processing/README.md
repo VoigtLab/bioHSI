@@ -8,12 +8,14 @@ This directory contains the code needed to:
 ## Data
 To download the data used in the notebooks, run the following command:
 
-`bash download_data.sh`
+```
+bash download_data.sh
+```
 
 ## Installation
 
-To install the required dependencies, run the following command in your terminal:
 The code was tested running Python v.3.10.2
+To install the required dependencies, run the following command in your terminal:
 
 ```bash
 pip install -r requirements.txt
