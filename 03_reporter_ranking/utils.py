@@ -248,17 +248,6 @@ def get_canon_tautomer(smiles):
         std_mol = None
     return std_mol
 
-def plot_jittery_horizontal_scatterplot(data, x, y, jitter=0.25, **kwargs):
-    #apply jitter along y axis:
-    data = data.copy()
-    if 'jitter_multiplier' in data.columns:
-        data[y] = data[y] + np.random.uniform(-jitter,jitter,len(data))*data['jitter_multiplier']
-    else:
-        data[y] = data[y] + np.random.uniform(-jitter,jitter,len(data))
-    ax = sns.scatterplot(data, x=x, y=y, **kwargs)
-    ax.minorticks_on()
-    ax.tick_params(axis='y', which='minor', left=False)
-    return ax
 
 def plot_steps_vs_uniqueness_for_organism (uniqueness_scores, bb_set_name, 
                                            organism, organism_abbrev, 

@@ -547,7 +547,7 @@ def cluster_based_extract_endmembers(img, n_clusters,
         
 def kmeans_hierarchical_extract_endmembers(img, output_prefix=None, clustering_method=MiniBatchKMeans,
                                            metric = 'cosine', linkage = 'average', distance_threshold = 0.005,
-                                         reduced_dims=3, return_cluster_idxs=False, n_clusters = 1000,
+                                           reduced_dims=3, return_cluster_idxs=False, n_clusters = 1000,
                                            filter_threshold = 0.9, reference_spec=None, norm=True, **kmeans_clustering_kwargs
                                           ):        
 

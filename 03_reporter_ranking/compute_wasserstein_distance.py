@@ -14,7 +14,7 @@ print ('Date prefix:', date_str)
 
 def parse_args():
     parser = argparse.ArgumentParser(description='Compute background impact scores for spectra')
-    parser.add_argument('--input_file', type=str, help='Path to input file', default = 'input_data/16Jul2023_all_done_spectra.csv')
+    parser.add_argument('--input_file', type=str, help='Path to input file', default = '00_data/16Jul2023_all_done_spectra.csv')
     parser.add_argument('--output_file', type=str, help='Path to output file')
     parser.add_argument('--n_jobs', type=int, default=16, help='Number of jobs to run in parallel')
     parser.add_argument('--lb', type=int, default=0, help='Spectral lower bound')
@@ -46,9 +46,11 @@ if __name__=='__main__':
     dists_path = f'{path_name}_dist{ext}'
     kwargs = {'wl_lb':WL_LOWER_BOUND, 'wl_ub':WL_UPPER_BOUND}
     # distance_function  = lambda x,y : stats.wasserstein_distance (all_tddft.columns.tolist(), all_tddft.columns.tolist(), x,y)
-    all_cdfs = (all_tddft/np.trapz(all_tddft.values, axis=0)).cumsum(axis=0)
+    #all_cdfs = (all_tddft/np.trapz(all_tddft.values, axis=0)).cumsum(axis=0)
+    
+    all_cdfs = (all_tddft/np.trapz(all_tddft.values, axis=1)[:,np.newaxis]).cumsum(axis=1)
     x = np.array(all_tddft.columns.tolist())
-    distance_function = lambda x, y: np.trapz(np.abs(x-y), x = x)    
+    distance_function = lambda s1, s2: np.trapz(np.abs(s1-s2), x = x)
     wasserstein_dist = get_uniqueness(all_cdfs, distance_function, parse_spectra_peaks=False, 
                                       topk_frac = 1, n_jobs=args.n_jobs, 
                                       save_dists=dists_path,intensity_thresh=INT_THRESHOLD, **kwargs)

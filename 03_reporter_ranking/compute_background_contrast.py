@@ -2,8 +2,8 @@ import pandas as pd
 from spectral import *
 from scipy.spatial.distance import pdist, cdist, squareform, cosine, jensenshannon
 import numpy as np
-from spectranalysis.utils import *
-from spectranalysis.uniqueness_utils import *
+from utils import *
+from uniqueness_utils import *
 from datetime import date
 from joblib import Parallel, delayed
 import argparse
@@ -15,7 +15,8 @@ import argparse
 
 def parse_args():
     parser = argparse.ArgumentParser(description='Compute background impact scores for spectra')
-    parser.add_argument('--input_background', type=str, help='Path to input spectra file')
+    parser.add_argument('--input_background', type=str, help='Path to image of background for contrast calculation')
+    parser.add_argument('--input_spectra', type=str, help='Path to input spectra file', default = '00_data/16Jul2023_all_done_spectra.csv')
     parser.add_argument('--output_file', type=str, help='Path to output file')
     parser.add_argument('--n_jobs', type=int, default=16, help='Number of jobs to run in parallel')
     return parser.parse_args()
@@ -57,7 +58,7 @@ def calc_contrast_to_diffs(specs, diff_pixels, n_jobs=16):
 
 if __name__=='__main__':
     args = parse_args()
-    all_tddft = pd.read_csv('input_data/16Jul2023_all_done_spectra.csv', index_col=0).transpose()
+    all_tddft = pd.read_csv(args.input_spectra, index_col=0).transpose()
     all_tddft.index = [m.split('/')[-1].replace('_b3lyp','') for m in all_tddft.index]
 
     # Set bounds for wavelengths to compare (in nm)
