@@ -2,6 +2,7 @@ from hsi_detect.utils import *
 import argparse
 from datetime import date
 # Plotting parameters
+from PIL import Image
 import matplotlib.pyplot as plt
 import matplotlib as mpl
 mpl.rcParams['pdf.fonttype'] = 42
@@ -11,10 +12,10 @@ def parse_arguments():
   parser.add_argument('--reference-spectrum-path', type=str, required=True, help='Path to the reference spectrum file.')
   parser.add_argument('--image-path', type=str, required=True, help='Path to the image hdr file.')
   parser.add_argument('--save-prefix', type=str, required=True, help='Prefix to save the classified image.')
-  parser.add_argument('--dist-threshold', type=float, required=True, help='Distance threshold for classification.')
+  parser.add_argument('--dist-threshold', type=float, default=0.005, help='Distance threshold for classification.')
   parser.add_argument('--smoothing-window-size', type=int, default=11, required=False, help='Window for smoothing pixel spectra.')
   parser.add_argument('--reduced-dims', type=int, default=3, required=False, help='Number of dimensions to keep in PCA step of classication.')
-  parser.add_argument('--filter-threshold', type=float, required=True, help='Similarity to reference threshold above which to remove endmembers.')
+  parser.add_argument('--filter-threshold', type=float, default=0.9, help='Similarity to reference threshold above which to remove endmembers.')
   return parser.parse_args()
 
 if __name__ == "__main__":
@@ -52,7 +53,7 @@ if __name__ == "__main__":
                                                              reference_spec=reference_spec, 
                                                              reduced_dims=args.reduced_dims,
                                                              filter_threshold=args.filter_threshold,
-                                                             distance_threshold=args.distance_threshold,
+                                                             distance_threshold=args.dist_threshold,
                                                              n_init=5)
   
   mat = np.vstack([-reference_spec, em_ls[0]])
@@ -61,15 +62,5 @@ if __name__ == "__main__":
 
   # threshold score
   scored_img[scored_img<0] = 0
-
-  # Visualize classified image
-
-  plt.figure(dpi=500)
-  plt.imshow(scored_img, vmin=0, vmax=0.5, cmap='inferno')
-  plt.xticks([])
-  plt.yticks([])
-  plt.box(False)
-  plt.savefig(save_prefix+f'{date_str}_classified.png', dpi=500, transparent=True)
-  plt.colorbar()
-  plt.savefig(save_prefix+f'{date_str}_classified_w_colorbar.pdf', dpi=500, transparent=True)
-  plt.show()
+  im = Image.fromarray(scored_img)
+  im.save(save_prefix+f'{date_str}_classified.tiff')
