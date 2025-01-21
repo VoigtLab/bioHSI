@@ -493,11 +493,17 @@ def filter_out_endmembers_with_reference(endmember_ls, cluster_idx_ls, reference
     return filtered_endmembers_ls, filtered_cluster_idx_ls
 
 def cluster_based_extract_endmembers(img, n_clusters, 
-                                     output_prefix=None, clustering_method=MiniBatchKMeans, 
+                                     clustering_method=MiniBatchKMeans, 
                                      reduced_dims=10, return_cluster_idxs=False, 
                                      return_flattened_img=False, norm=True, **kmeans_clustering_kwargs):
     
-    img_flattened= np.reshape(img, (img.shape[0]*img.shape[1], img.shape[2]))
+    if len(img.shape)==3:
+        img_flattened= np.reshape(img, (img.shape[0]*img.shape[1], img.shape[2]))
+    elif len(img.shape)==2:
+        img_flattened = img
+    else:
+        raise ValueError(f"Input image cannot have {len(img.shape)} dimension(s). Must have 2 or 3 dimensions")
+    
     if norm:
         img_flattened = img_flattened / np.nanmax(img_flattened, axis=1, keepdims=True)
     pca_pixels = reduce_pixel_dimensionality(img_flattened, dims=reduced_dims)
@@ -524,16 +530,11 @@ def cluster_based_extract_endmembers(img, n_clusters,
         
         reconstructed_cluster_idxs = np.zeros(len(img_flattened)) * np.nan
         reconstructed_cluster_idxs[pixel_idxs] = cluster_idxs
-        reconstructed_clusters_img = np.reshape(reconstructed_cluster_idxs, img.shape[:2])
         all_cluster_idxs.append(reconstructed_cluster_idxs)
         endmembers = []
         for i in np.unique(cluster_idxs):
             if not np.isnan(i):
                 endmembers.append(np.nanmean(img_flattened[reconstructed_cluster_idxs==i,:], axis=0))
-
-        if output_prefix is not None:
-            np.save (output_prefix+f'{c}-clusters_LS_cluster_map.npy', reconstructed_clusters_img)
-            np.save (output_prefix+f'{c}-clusters_LS_endmembers.npy', endmembers)
         
         all_endmembers.append(endmembers)
     
@@ -545,14 +546,49 @@ def cluster_based_extract_endmembers(img, n_clusters,
         return all_endmembers, all_cluster_idxs
 
         
-def kmeans_hierarchical_extract_endmembers(img, output_prefix=None, clustering_method=MiniBatchKMeans,
+def kmeans_hierarchical_extract_endmembers(img, reference_spec=None, 
+                                           #Initial clustering params
+                                           clustering_method=None, reduced_dims=3, n_clusters = 1000, norm=True,
+                                           #filtering params
+                                           filter_threshold = 0.9,
+                                           #agglomerative clustering params
                                            metric = 'cosine', linkage = 'average', distance_threshold = 0.005,
-                                           reduced_dims=3, return_cluster_idxs=False, n_clusters = 1000,
-                                           filter_threshold = 0.9, reference_spec=None, norm=True, **kmeans_clustering_kwargs
+                                           # additional params
+                                           return_cluster_idxs=False, **kmeans_clustering_kwargs
                                           ):        
+    """
+    Performs a two-step clustering of the pixels in a hyperspectral image.
+    The initial classification is a K-Means classification with a large K.
+    The second classification is an agglomerative clustering with a fixed distance
+    threshold. The clusters from the initial classification are merged if they 
+    fall beneath the distance threshold. An intermediary filtering step is performed
+    to remove clusters that have a high likelihood of containing the hyperspectral
+    reporter. 
+
+    Parameters:
+        img (np.array): Hyperspectral image with dimensions (n_x, n_y, n_wavelengths) or flattened image with dimensions (n_pixels, n_wavelengths)
+        reference_spec (np.array): Array with the absorbance intensities of the HSR absorbance spectrum. 
+            It is assumed that these values correspond to the wavelengths of the img.
+        clustering_method (class like sklearn.cluster.MiniBatchKMeans): class to perform initial clustering
+        reduced_dims (int): Number of reduced dimensions for representing the pixels for initial clustering
+        n_clusters (int): Number of clusters for initial clustering
+        norm (bool): if True, pixel intensities are normalized to a max of 1 for the initial clustering step
+        filter_threshold (float): threshold for cosine similarity to filter out clusters after initial clustering
+        metric (string): metric to use for agglomerative clustering
+        linkage (string): linkage method to use for agglomerative clustering 
+        distance_threshold (float): threshold for agglomerative clustering
+        return_cluster_idxs (bool): if True, returns a cluster label for each pixel in the image, corresponding to the final cluster assignment
+    """
+    
+    if clustering_method is None:
+        clustering_method = MiniBatchKMeans
+
+    assert len(reference_spec) == img.shape[-1]
 
     em_ls, clust_ls, img_flattened = cluster_based_extract_endmembers(img, n_clusters, reduced_dims=reduced_dims, return_cluster_idxs=True, 
-                                                                      return_flattened_img=True, clustering_method=clustering_method, norm=norm, **kmeans_clustering_kwargs)
+                                                                      return_flattened_img=True, clustering_method=clustering_method, norm=norm, 
+                                                                      **kmeans_clustering_kwargs)
+    
     em_ls, clust_ls = filter_out_endmembers_with_reference(em_ls, clust_ls, reference_spec, filter_threshold)
     
     #agglomerative cluster endmembers 
