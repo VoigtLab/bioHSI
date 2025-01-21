@@ -88,7 +88,7 @@ class HierarchicalKMeansUnmixer(HSIClassifier):
       raise ValueError("Endmembers are not defined. Run `fit` first.")
     
     plt.figure()
-    for i, em in self.em_ls[0]:
+    for em in self.em_ls[0]:
       plt.plot(self.reference_spec.wavelengths, em)
     plt.show()
 
