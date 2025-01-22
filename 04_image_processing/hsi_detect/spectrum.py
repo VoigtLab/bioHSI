@@ -2,9 +2,15 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 class Spectrum:
-  def __init__(self, file_path):
+  def __init__(self, file_path=None, wavelengths=None, intensities=None):
     self.file_path = file_path
-    self.wavelengths, self.intensities = self.load_spectrum()
+    if self.file_path is not None and wavelengths is None and intensities is None:
+      self.wavelengths, self.intensities = self.load_spectrum()
+    elif self.file_path is None and wavelengths is not None and intensities is not None:
+      self.wavelengths = wavelengths
+      self.intensities = intensities
+    else:
+      raise ValueError("Provide file_path OR spectrum data, not both.")
     
   def load_spectrum(self):
     if self.file_path.endswith('.npy'):
