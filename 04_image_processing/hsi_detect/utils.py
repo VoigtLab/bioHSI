@@ -1,26 +1,12 @@
 from spectral import *
 import numpy as np
-import spectral.io.envi as envi
-import matplotlib.pyplot as plt
+import scipy
+from sklearn.cluster import MiniBatchKMeans, AgglomerativeClustering
 from sklearn.decomposition import PCA
-import pandas as pd
-import cv2 as cv
-import scipy
-from PIL import Image
-from tqdm import tqdm
-import PIL
-import scipy
-from sklearn import mixture
-import os 
-import re
-from collections import OrderedDict
-from joblib import Parallel, delayed
-
 from scipy.ndimage import uniform_filter
 from scipy.optimize import curve_fit
+import matplotlib.pyplot as plt
 from matplotlib.patches import ConnectionPatch
-
-from sklearn.cluster import MiniBatchKMeans, AgglomerativeClustering
 
 def gaussian(x, mu, sig):
     return np.exp(-np.power(x - mu, 2.) / (2 * np.power(sig, 2.)))
@@ -74,7 +60,6 @@ def get_derivative (lib, wl_1, wl_2):
     
     return deriv
 
-
 def flatten_array (array):
     return np.reshape (array, (array.shape[0]*array.shape[1]))
 
@@ -109,23 +94,53 @@ import inspect
 
 
 def plot_fit_curve (conc, ab, _hill_eqn, xlims, ylims, figname, markersize=13, fit_linewidth=0.5, xlabel='', 
-                    ylabel = 'Fraction absorbed', pts = 5000, ymax_bound = 1, ymin_bound=0,
-                    line_color = 'black',
-                    marker_color='black', edgecolor='black',
-                    width_ratios = [1,10], figsize=(1.5,1.5), ylog=False, error=None,
-                    additional_concs_to_plot=None, 
-                    additional_data_to_plot = None, 
-                    additional_data_ylims = None,
-                    colors_for_additional_data=None, x_offset=1e-7, yticks=None, fit_lower_bounds=[-np.inf,-np.inf,0,0], 
-                    fit_upper_bounds=[np.inf,np.inf,np.inf, np.inf],
-                    ignore_for_fit = None
-                   ):
+                    ylabel='Fraction absorbed', pts=5000, ymax_bound=1, ymin_bound=0, line_color='black',
+                    marker_color='black', edgecolor='black', width_ratios=[1, 10], figsize=(1.5, 1.5), ylog=False, 
+                    error=None, additional_concs_to_plot=None, additional_data_to_plot=None, 
+                    additional_data_ylims=None, colors_for_additional_data=None, x_offset=1e-7, yticks=None, 
+                    fit_lower_bounds=[-np.inf, -np.inf, 0, 0], fit_upper_bounds=[np.inf, np.inf, np.inf, np.inf], 
+                    ignore_for_fit=None):
+    """
+    Plots a fit dose-response curve using the provided concentration (X) and score (Y) data.
+    Parameters:
+    -----------
+    conc (array-like): Concentration data, x-values.
+    ab (array-like): Absorption data, y-values.
+    _hill_eqn (callable): Hill equation function for fitting.
+    xlims (tuple): Limits for the x-axis.
+    ylims (tuple): Limits for the y-axis.
+    figname (str): Filename to save the figure.
+    markersize (int, optional): Size of the markers. Default is 13.
+    fit_linewidth (float, optional): Line width of the fit curve. Default is 0.5.
+    xlabel (str, optional): Label for the x-axis. Default is an empty string.
+    ylabel (str, optional): Label for the y-axis. Default is 'Fraction absorbed'.
+    pts (int, optional): Number of points for the fit curve. Default is 5000.
+    ymax_bound (float, optional): Upper bound for the y-axis. Default is 1.
+    ymin_bound (float, optional): Lower bound for the y-axis. Default is 0.
+    line_color (str, optional): Color of the fit line. Default is 'black'.
+    marker_color (str, optional): Color of the markers. Default is 'black'.
+    edgecolor (str, optional): Edge color of the markers. Default is 'black'.
+    width_ratios (list, optional): Width ratios for the subplots. Default is [1, 10].
+    figsize (tuple, optional): Size of the figure. Default is (1.5, 1.5).
+    ylog (bool, optional): Whether to use logarithmic scale for the y-axis. Default is False.
+    error (array-like, optional): Error data for the absorption values. Default is None.
+    additional_concs_to_plot (array-like, optional): Additional concentration data to plot. Default is None.
+    additional_data_to_plot (array-like, optional): Additional absorption data to plot. Default is None.
+    additional_data_ylims (tuple, optional): Y-axis limits for the additional data. Default is None.
+    colors_for_additional_data (list, optional): Colors for the additional data points. Default is None.
+    x_offset (float, optional): Offset for the x-axis. Default is 1e-7.
+    yticks (list, optional): Custom y-ticks. Default is None.
+    fit_lower_bounds (list, optional): Lower bounds for the fit parameters. Default is [-np.inf, -np.inf, 0, 0].
+    fit_upper_bounds (list, optional): Upper bounds for the fit parameters. Default is [np.inf, np.inf, np.inf, np.inf].
+    ignore_for_fit (list, optional): Indices to ignore for fitting. Default is None.
     
-    
+    Returns:
+    --------
+    None
+    """
     f, (ax, ax2) = plt.subplots(1, 2, figsize = figsize, sharey=True, gridspec_kw={'width_ratios': width_ratios}, dpi=300)
     try:
         print ('FITTING')
-        
         conc_to_fit = conc
         ab_to_fit = ab
         if ignore_for_fit is not None:
@@ -253,13 +268,64 @@ def plot_fit_curve (conc, ab, _hill_eqn, xlims, ylims, figname, markersize=13, f
     plt.show() 
 
 
-def plot_fit_curves (ls_conc, ls_ab, _hill_eqn, xlims, ylims, figname, markersize=13, fit_linewidth=1, xlabel='Concentration', 
-                    ylabel = 'Fraction absorbed', pts = 5000, ymax_bounds = [1], 
-                    marker_colors='black', width_ratios = [1,10], figsize=(1.5,1.5), 
-                     ylog=False, error=None, x_offset = 3e-6, y_minorticks=True, match_line_colors=True):
-    
 
+def plot_fit_curves(ls_conc, ls_ab, _hill_eqn, xlims, ylims, figname, markersize=13, fit_linewidth=1, xlabel='Concentration', 
+                    ylabel='Fraction absorbed', pts=5000, ymax_bounds=[1], 
+                    marker_colors='black', width_ratios=[1,10], figsize=(1.5,1.5), 
+                    ylog=False, error=None, x_offset=3e-6, y_minorticks=True, 
+                    match_line_colors=True):
+    """
+    Plots fit curves for given concentration and absorption data using a specified Hill equation.
+    Used for plotting multiple series of data.
     
+    Parameters:
+    -----------
+    ls_conc (list of array-like): 
+        List of concentration data arrays.
+    ls_ab (list of array-like): 
+        List of absorption data arrays.
+    _hill_eqn (callable): 
+        Hill equation function to fit the data.
+    xlims (tuple): 
+        Limits for the x-axis (min, max).
+    ylims (tuple): 
+        Limits for the y-axis (min, max).
+    figname (str): 
+        Filename to save the figure.
+    markersize (int, optional): 
+        Size of the markers in the scatter plot (default is 13).
+    fit_linewidth (int, optional): 
+        Line width of the fit curve (default is 1).
+    xlabel (str, optional): 
+        Label for the x-axis (default is 'Concentration').
+    ylabel (str, optional): 
+        Label for the y-axis (default is 'Fraction absorbed').
+    pts (int, optional): 
+        Number of points to use for the fit curve (default is 5000).
+    ymax_bounds (list, optional): 
+        Upper bounds for the ymax parameter in the Hill equation (default is [1]).
+    marker_colors (str or list, optional): 
+        Colors for the markers (default is 'black').
+    width_ratios (list, optional): 
+        Width ratios for the subplots (default is [1, 10]).
+    figsize (tuple, optional): 
+        Size of the figure (default is (1.5, 1.5)).
+    ylog (bool, optional): 
+        Whether to use a logarithmic scale for the y-axis (default is False).
+    error (list, optional): 
+        Error bars for the data points (default is None).
+    x_offset (float, optional): 
+        Offset for the x-axis (default is 3e-6).
+    y_minorticks (bool, optional): 
+        Whether to show minor ticks on the y-axis (default is True).
+    match_line_colors (bool, optional): 
+        Whether to match the line colors to the marker colors (default is True).
+    
+    Returns:
+    --------
+    None
+    """
+
     f, (ax, ax2) = plt.subplots(1, 2, figsize = figsize, sharey=True, gridspec_kw={'width_ratios': width_ratios}, dpi=300)
     linewidth = 0.5
     d = 2.5
@@ -737,3 +803,18 @@ def make_circle_mask  (mask_shape, centers, radii):
         mask += mask_ellipse(np.ones_like(mask), c, r, r)
     return mask
     
+
+def get_local_ip():
+    """
+    Returns the local IP address of the system.
+    """
+    import socket
+    try:
+        # Create a socket and connect to a dummy external address
+        with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
+            s.connect(("8.8.8.8", 80))  # Use Google's DNS server as the target
+            ip_address = s.getsockname()[0]
+        return ip_address
+    except Exception as e:
+        print(f"Error: {e}")
+        return None
