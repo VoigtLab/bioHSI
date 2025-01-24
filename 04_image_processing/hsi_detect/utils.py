@@ -1,26 +1,12 @@
 from spectral import *
 import numpy as np
-import spectral.io.envi as envi
-import matplotlib.pyplot as plt
+import scipy
+from sklearn.cluster import MiniBatchKMeans, AgglomerativeClustering
 from sklearn.decomposition import PCA
-import pandas as pd
-import cv2 as cv
-import scipy
-from PIL import Image
-from tqdm import tqdm
-import PIL
-import scipy
-from sklearn import mixture
-import os 
-import re
-from collections import OrderedDict
-from joblib import Parallel, delayed
-
 from scipy.ndimage import uniform_filter
 from scipy.optimize import curve_fit
+import matplotlib.pyplot as plt
 from matplotlib.patches import ConnectionPatch
-
-from sklearn.cluster import MiniBatchKMeans, AgglomerativeClustering
 
 def gaussian(x, mu, sig):
     return np.exp(-np.power(x - mu, 2.) / (2 * np.power(sig, 2.)))
@@ -74,7 +60,6 @@ def get_derivative (lib, wl_1, wl_2):
     
     return deriv
 
-
 def flatten_array (array):
     return np.reshape (array, (array.shape[0]*array.shape[1]))
 
@@ -109,23 +94,53 @@ import inspect
 
 
 def plot_fit_curve (conc, ab, _hill_eqn, xlims, ylims, figname, markersize=13, fit_linewidth=0.5, xlabel='', 
-                    ylabel = 'Fraction absorbed', pts = 5000, ymax_bound = 1, ymin_bound=0,
-                    line_color = 'black',
-                    marker_color='black', edgecolor='black',
-                    width_ratios = [1,10], figsize=(1.5,1.5), ylog=False, error=None,
-                    additional_concs_to_plot=None, 
-                    additional_data_to_plot = None, 
-                    additional_data_ylims = None,
-                    colors_for_additional_data=None, x_offset=1e-7, yticks=None, fit_lower_bounds=[-np.inf,-np.inf,0,0], 
-                    fit_upper_bounds=[np.inf,np.inf,np.inf, np.inf],
-                    ignore_for_fit = None
-                   ):
+                    ylabel='Fraction absorbed', pts=5000, ymax_bound=1, ymin_bound=0, line_color='black',
+                    marker_color='black', edgecolor='black', width_ratios=[1, 10], figsize=(1.5, 1.5), ylog=False, 
+                    error=None, additional_concs_to_plot=None, additional_data_to_plot=None, 
+                    additional_data_ylims=None, colors_for_additional_data=None, x_offset=1e-7, yticks=None, 
+                    fit_lower_bounds=[-np.inf, -np.inf, 0, 0], fit_upper_bounds=[np.inf, np.inf, np.inf, np.inf], 
+                    ignore_for_fit=None):
+    """
+    Plots a fit dose-response curve using the provided concentration (X) and score (Y) data.
+    Parameters:
+    -----------
+    conc (array-like): Concentration data, x-values.
+    ab (array-like): Absorption data, y-values.
+    _hill_eqn (callable): Hill equation function for fitting.
+    xlims (tuple): Limits for the x-axis.
+    ylims (tuple): Limits for the y-axis.
+    figname (str): Filename to save the figure.
+    markersize (int, optional): Size of the markers. Default is 13.
+    fit_linewidth (float, optional): Line width of the fit curve. Default is 0.5.
+    xlabel (str, optional): Label for the x-axis. Default is an empty string.
+    ylabel (str, optional): Label for the y-axis. Default is 'Fraction absorbed'.
+    pts (int, optional): Number of points for the fit curve. Default is 5000.
+    ymax_bound (float, optional): Upper bound for the y-axis. Default is 1.
+    ymin_bound (float, optional): Lower bound for the y-axis. Default is 0.
+    line_color (str, optional): Color of the fit line. Default is 'black'.
+    marker_color (str, optional): Color of the markers. Default is 'black'.
+    edgecolor (str, optional): Edge color of the markers. Default is 'black'.
+    width_ratios (list, optional): Width ratios for the subplots. Default is [1, 10].
+    figsize (tuple, optional): Size of the figure. Default is (1.5, 1.5).
+    ylog (bool, optional): Whether to use logarithmic scale for the y-axis. Default is False.
+    error (array-like, optional): Error data for the absorption values. Default is None.
+    additional_concs_to_plot (array-like, optional): Additional concentration data to plot. Default is None.
+    additional_data_to_plot (array-like, optional): Additional absorption data to plot. Default is None.
+    additional_data_ylims (tuple, optional): Y-axis limits for the additional data. Default is None.
+    colors_for_additional_data (list, optional): Colors for the additional data points. Default is None.
+    x_offset (float, optional): Offset for the x-axis. Default is 1e-7.
+    yticks (list, optional): Custom y-ticks. Default is None.
+    fit_lower_bounds (list, optional): Lower bounds for the fit parameters. Default is [-np.inf, -np.inf, 0, 0].
+    fit_upper_bounds (list, optional): Upper bounds for the fit parameters. Default is [np.inf, np.inf, np.inf, np.inf].
+    ignore_for_fit (list, optional): Indices to ignore for fitting. Default is None.
     
-    
+    Returns:
+    --------
+    None
+    """
     f, (ax, ax2) = plt.subplots(1, 2, figsize = figsize, sharey=True, gridspec_kw={'width_ratios': width_ratios}, dpi=300)
     try:
         print ('FITTING')
-        
         conc_to_fit = conc
         ab_to_fit = ab
         if ignore_for_fit is not None:
@@ -253,13 +268,64 @@ def plot_fit_curve (conc, ab, _hill_eqn, xlims, ylims, figname, markersize=13, f
     plt.show() 
 
 
-def plot_fit_curves (ls_conc, ls_ab, _hill_eqn, xlims, ylims, figname, markersize=13, fit_linewidth=1, xlabel='Concentration', 
-                    ylabel = 'Fraction absorbed', pts = 5000, ymax_bounds = [1], 
-                    marker_colors='black', width_ratios = [1,10], figsize=(1.5,1.5), 
-                     ylog=False, error=None, x_offset = 3e-6, y_minorticks=True, match_line_colors=True):
-    
 
+def plot_fit_curves(ls_conc, ls_ab, _hill_eqn, xlims, ylims, figname, markersize=13, fit_linewidth=1, xlabel='Concentration', 
+                    ylabel='Fraction absorbed', pts=5000, ymax_bounds=[1], 
+                    marker_colors='black', width_ratios=[1,10], figsize=(1.5,1.5), 
+                    ylog=False, error=None, x_offset=3e-6, y_minorticks=True, 
+                    match_line_colors=True):
+    """
+    Plots fit curves for given concentration and absorption data using a specified Hill equation.
+    Used for plotting multiple series of data.
     
+    Parameters:
+    -----------
+    ls_conc (list of array-like): 
+        List of concentration data arrays.
+    ls_ab (list of array-like): 
+        List of absorption data arrays.
+    _hill_eqn (callable): 
+        Hill equation function to fit the data.
+    xlims (tuple): 
+        Limits for the x-axis (min, max).
+    ylims (tuple): 
+        Limits for the y-axis (min, max).
+    figname (str): 
+        Filename to save the figure.
+    markersize (int, optional): 
+        Size of the markers in the scatter plot (default is 13).
+    fit_linewidth (int, optional): 
+        Line width of the fit curve (default is 1).
+    xlabel (str, optional): 
+        Label for the x-axis (default is 'Concentration').
+    ylabel (str, optional): 
+        Label for the y-axis (default is 'Fraction absorbed').
+    pts (int, optional): 
+        Number of points to use for the fit curve (default is 5000).
+    ymax_bounds (list, optional): 
+        Upper bounds for the ymax parameter in the Hill equation (default is [1]).
+    marker_colors (str or list, optional): 
+        Colors for the markers (default is 'black').
+    width_ratios (list, optional): 
+        Width ratios for the subplots (default is [1, 10]).
+    figsize (tuple, optional): 
+        Size of the figure (default is (1.5, 1.5)).
+    ylog (bool, optional): 
+        Whether to use a logarithmic scale for the y-axis (default is False).
+    error (list, optional): 
+        Error bars for the data points (default is None).
+    x_offset (float, optional): 
+        Offset for the x-axis (default is 3e-6).
+    y_minorticks (bool, optional): 
+        Whether to show minor ticks on the y-axis (default is True).
+    match_line_colors (bool, optional): 
+        Whether to match the line colors to the marker colors (default is True).
+    
+    Returns:
+    --------
+    None
+    """
+
     f, (ax, ax2) = plt.subplots(1, 2, figsize = figsize, sharey=True, gridspec_kw={'width_ratios': width_ratios}, dpi=300)
     linewidth = 0.5
     d = 2.5
@@ -493,11 +559,17 @@ def filter_out_endmembers_with_reference(endmember_ls, cluster_idx_ls, reference
     return filtered_endmembers_ls, filtered_cluster_idx_ls
 
 def cluster_based_extract_endmembers(img, n_clusters, 
-                                     output_prefix=None, clustering_method=MiniBatchKMeans, 
+                                     clustering_method=MiniBatchKMeans, 
                                      reduced_dims=10, return_cluster_idxs=False, 
                                      return_flattened_img=False, norm=True, **kmeans_clustering_kwargs):
     
-    img_flattened= np.reshape(img, (img.shape[0]*img.shape[1], img.shape[2]))
+    if len(img.shape)==3:
+        img_flattened= np.reshape(img, (img.shape[0]*img.shape[1], img.shape[2]))
+    elif len(img.shape)==2:
+        img_flattened = img
+    else:
+        raise ValueError(f"Input image cannot have {len(img.shape)} dimension(s). Must have 2 or 3 dimensions")
+    
     if norm:
         img_flattened = img_flattened / np.nanmax(img_flattened, axis=1, keepdims=True)
     pca_pixels = reduce_pixel_dimensionality(img_flattened, dims=reduced_dims)
@@ -524,16 +596,11 @@ def cluster_based_extract_endmembers(img, n_clusters,
         
         reconstructed_cluster_idxs = np.zeros(len(img_flattened)) * np.nan
         reconstructed_cluster_idxs[pixel_idxs] = cluster_idxs
-        reconstructed_clusters_img = np.reshape(reconstructed_cluster_idxs, img.shape[:2])
         all_cluster_idxs.append(reconstructed_cluster_idxs)
         endmembers = []
         for i in np.unique(cluster_idxs):
             if not np.isnan(i):
                 endmembers.append(np.nanmean(img_flattened[reconstructed_cluster_idxs==i,:], axis=0))
-
-        if output_prefix is not None:
-            np.save (output_prefix+f'{c}-clusters_LS_cluster_map.npy', reconstructed_clusters_img)
-            np.save (output_prefix+f'{c}-clusters_LS_endmembers.npy', endmembers)
         
         all_endmembers.append(endmembers)
     
@@ -545,14 +612,49 @@ def cluster_based_extract_endmembers(img, n_clusters,
         return all_endmembers, all_cluster_idxs
 
         
-def kmeans_hierarchical_extract_endmembers(img, output_prefix=None, clustering_method=MiniBatchKMeans,
+def kmeans_hierarchical_extract_endmembers(img, reference_spec=None, 
+                                           #Initial clustering params
+                                           clustering_method=None, reduced_dims=3, n_clusters = 1000, norm=True,
+                                           #filtering params
+                                           filter_threshold = 0.9,
+                                           #agglomerative clustering params
                                            metric = 'cosine', linkage = 'average', distance_threshold = 0.005,
-                                           reduced_dims=3, return_cluster_idxs=False, n_clusters = 1000,
-                                           filter_threshold = 0.9, reference_spec=None, norm=True, **kmeans_clustering_kwargs
+                                           # additional params
+                                           return_cluster_idxs=False, **kmeans_clustering_kwargs
                                           ):        
+    """
+    Performs a two-step clustering of the pixels in a hyperspectral image.
+    The initial classification is a K-Means classification with a large K.
+    The second classification is an agglomerative clustering with a fixed distance
+    threshold. The clusters from the initial classification are merged if they 
+    fall beneath the distance threshold. An intermediary filtering step is performed
+    to remove clusters that have a high likelihood of containing the hyperspectral
+    reporter. 
+
+    Parameters:
+        img (np.array): Hyperspectral image with dimensions (n_x, n_y, n_wavelengths) or flattened image with dimensions (n_pixels, n_wavelengths)
+        reference_spec (np.array): Array with the absorbance intensities of the HSR absorbance spectrum. 
+            It is assumed that these values correspond to the wavelengths of the img.
+        clustering_method (class like sklearn.cluster.MiniBatchKMeans): class to perform initial clustering
+        reduced_dims (int): Number of reduced dimensions for representing the pixels for initial clustering
+        n_clusters (int): Number of clusters for initial clustering
+        norm (bool): if True, pixel intensities are normalized to a max of 1 for the initial clustering step
+        filter_threshold (float): threshold for cosine similarity to filter out clusters after initial clustering
+        metric (string): metric to use for agglomerative clustering
+        linkage (string): linkage method to use for agglomerative clustering 
+        distance_threshold (float): threshold for agglomerative clustering
+        return_cluster_idxs (bool): if True, returns a cluster label for each pixel in the image, corresponding to the final cluster assignment
+    """
+    
+    if clustering_method is None:
+        clustering_method = MiniBatchKMeans
+
+    assert len(reference_spec) == img.shape[-1]
 
     em_ls, clust_ls, img_flattened = cluster_based_extract_endmembers(img, n_clusters, reduced_dims=reduced_dims, return_cluster_idxs=True, 
-                                                                      return_flattened_img=True, clustering_method=clustering_method, norm=norm, **kmeans_clustering_kwargs)
+                                                                      return_flattened_img=True, clustering_method=clustering_method, norm=norm, 
+                                                                      **kmeans_clustering_kwargs)
+    
     em_ls, clust_ls = filter_out_endmembers_with_reference(em_ls, clust_ls, reference_spec, filter_threshold)
     
     #agglomerative cluster endmembers 
@@ -701,3 +803,18 @@ def make_circle_mask  (mask_shape, centers, radii):
         mask += mask_ellipse(np.ones_like(mask), c, r, r)
     return mask
     
+
+def get_local_ip():
+    """
+    Returns the local IP address of the system.
+    """
+    import socket
+    try:
+        # Create a socket and connect to a dummy external address
+        with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
+            s.connect(("8.8.8.8", 80))  # Use Google's DNS server as the target
+            ip_address = s.getsockname()[0]
+        return ip_address
+    except Exception as e:
+        print(f"Error: {e}")
+        return None
