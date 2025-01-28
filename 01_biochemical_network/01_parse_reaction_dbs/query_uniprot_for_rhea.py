@@ -4,7 +4,7 @@ import requests
 import re
 from tqdm import tqdm
 
-rhea_2_uniprot = pd.read_csv('rhea/rhea2uniprot_sprot.tsv', sep='\t')
+rhea_2_uniprot = pd.read_csv('../00_data/rhea/rhea2uniprot_sprot.tsv', sep='\t')
 
 uniprot_accessions = rhea_2_uniprot['ID'].tolist()
 
@@ -25,6 +25,6 @@ for b in tqdm(batched_uniprot_accessions):
     returned_uniprot.append(res)
 
 
-with open('uniprot_chkpoint_for_rhea.txt', 'w') as f:
+with open('../00_data/processed/uniprot_chkpoint_for_rhea.txt', 'w') as f:
     for line in returned_uniprot:
         f.write(line)
