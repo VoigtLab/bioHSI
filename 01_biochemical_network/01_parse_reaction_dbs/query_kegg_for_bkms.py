@@ -3,10 +3,15 @@ import re
 import pandas as pd
 import requests
 from tqdm import tqdm
+import os
 import numpy as np
 import json
 
-bkms_reactions = pd.read_csv('1Sep2023_bkms-mapped.txt',sep='\t')
+KEGG_SAVEDIR = '../00_data/processed/kegg'
+if not os.path.exists(KEGG_SAVEDIR):
+    os.mkdir(KEGG_SAVEDIR)
+
+bkms_reactions = pd.read_csv('../00_data/raw/bkms/1Sep2023_bkms-mapped.txt',sep='\t')
 kegg_rids = bkms_reactions['Reaction_ID_KEGG'].drop_duplicates().tolist()
 
 
@@ -77,13 +82,14 @@ unique_kegg_rids =(','.join([str(x) for x in kegg_rids])).split(',')
 kegg_genes = [get_genes_for_kegg_rid(x) for x in tqdm(unique_kegg_rids)]
 kegg_gene_ids = [[y.split('/')[-1] for y in x] for x in kegg_genes]
 
+
 kegg_rids_to_genes = dict(zip(unique_kegg_rids, kegg_gene_ids))
-with open('kegg_rids_to_genes.json','w') as f:
+with open(f'{KEGG_SAVEDIR}/kegg_rids_to_genes.json','w') as f:
     json.dump(kegg_rids_to_genes, f)
 
 
 kegg_sequences = [retrieve_sequence_for_first_gene(x) for x in tqdm(list(kegg_rids_to_genes.values()))]
 
 kegg_rids_to_sequences = dict(zip(unique_kegg_rids, kegg_sequences))
-with open('kegg_rids_to_sequences.json','w') as f:
+with open(f'{KEGG_SAVEDIR}/kegg_rids_to_sequences.json','w') as f:
     json.dump(kegg_rids_to_sequences, f)

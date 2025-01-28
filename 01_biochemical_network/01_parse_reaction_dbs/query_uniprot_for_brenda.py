@@ -1,8 +1,10 @@
 import json
 import pandas as pd
 import requests
-import re
+import os
 from tqdm import tqdm
+
+PID_TO_SEQUENCE_FILE = '../00_data/processed/brenda/20Nov2023_protein_id_to_sequence.json'
 
 with open('../00_data/processed/brenda/scraped_brenda_substrate_results.json', 'r') as f:
     parsed_brenda = json.load(f)
@@ -17,12 +19,11 @@ ls = [x.replace(' ','').replace(';',',').split(',') for x in list(uniprot_access
 uniprot_accessions = set([x for y in ls for x in y])
 
 #check if its already_queried 
-with open('20Nov2023_protein_id_to_sequence.json','r') as f:
-    uniprot2seq = json.load(f)
-
-#if os.path.isfile('uniprot_chkpoint_for_brenda.txt'):
-#    with open()
-
+if os.path.exists(PID_TO_SEQUENCE_FILE):
+    with open(PID_TO_SEQUENCE_FILE,'r') as f:
+        uniprot2seq = json.load(f)
+else:
+    uniprot2seq = {}
 
 uniprot_accessions = [u for u in uniprot_accessions if u not in uniprot2seq.keys()]
 
@@ -38,6 +39,6 @@ for b in tqdm(batched_uniprot_accessions):
     returned_uniprot.append(res)
 
 
-with open('20Nov2023uniprot_chkpoint_for_brenda.txt', 'a') as f:
+with open(PID_TO_SEQUENCE_FILE, 'a') as f:
     for line in returned_uniprot:
         f.write(line)

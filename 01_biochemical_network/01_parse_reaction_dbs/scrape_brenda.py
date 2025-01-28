@@ -1,3 +1,8 @@
+"""
+Code to extract Brenda ID and protein accesssion numbers from the from Brenda 
+database.
+"""
+
 import pandas as pd
 from tqdm import tqdm
 import requests
@@ -43,7 +48,8 @@ class BrendaPage():
                 res_list.append(res_dict)
         self.substrate_table_info = res_list
 
-with open('brenda_2023_1.json','r') as f:
+# Flatfile downloaded from Brenda website
+with open('../00_data/raw/brenda_2023_1.json','r') as f:
     brenda_flatfile = json.load(f)
 
 ec_numbers = list(brenda_flatfile['data'].keys())
@@ -55,8 +61,8 @@ for i, (ec, url) in tqdm(enumerate(zip(ec_numbers, urls))):
     except Exception as e:
         print (e, 'could not retrieve info for ec number {}'.format(ec))
     if i % 100 == 0:
-        with open('scraped_brenda_substrate_results.chkpt', 'w') as f:
+        with open('../00_data/processed/brenda/scraped_brenda_substrate_results.chkpt', 'w') as f:
             json.dump(brenda_pages_results,f)
 
-with open('scraped_brenda_substrate_results.json', 'w') as f:
+with open('../00_data/processed/brenda/scraped_brenda_substrate_results.json', 'w') as f:
     json.dump(brenda_pages_results,f)
