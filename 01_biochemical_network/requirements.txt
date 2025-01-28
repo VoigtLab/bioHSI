@@ -2,6 +2,7 @@ bs4
 networkx
 numpy
 pandas
+pickle5
 rdkit
 requests
 tqdm
