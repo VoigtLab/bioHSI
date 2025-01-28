@@ -4,7 +4,7 @@ BASIS="6-31g(d)"
 MEM=16
 CPUS=10
 IN_EXT="coord"
-GAU_OUTPUT_DIR="/nobackup1c/users/itail/"
+GAU_OUTPUT_DIR=""
 NAMECOL=name
 SMILESCOL=smiles
 
@@ -48,12 +48,12 @@ while (( $# )); do
 done
 
 module add anaconda3/2020.11
+#requires the conda environment biospectral to be defined
 source activate biospectral
-
 export PYTHONPATH="~/biospectral":$PYTHONPATH
 
 echo "Running make_structure.py"
-~/.conda/envs/biospectral/bin/python biospectral/make_structure.py --mol-file $MOLFILE --smiles-col $SMILESCOL --name-col $NAMECOL --out-dir $INPUT_DIR
+python biospectral/make_structure.py --mol-file $MOLFILE --smiles-col $SMILESCOL --name-col $NAMECOL --out-dir $INPUT_DIR
 
 echo "Running make_gaus_inputs.sh"
 bash biospectral/make_gaus_inputs.sh -i $INPUT_DIR -o $INPUT_DIR -f $FUNCTIONAL -b $BASIS --input-extension $IN_EXT --gau-output-dir $GAU_OUTPUT_DIR --mem $MEM --cpus $CPUS 

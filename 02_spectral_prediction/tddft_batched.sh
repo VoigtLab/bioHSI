@@ -26,5 +26,5 @@ for (( STARTLINE=0; STARTLINE<$FILENUM ; STARTLINE+=$BATCHSIZE )); do
     INPUTS=$(ls $INPUT_DIR/*com | tail -n +${STARTLINE} | head -n $BATCHSIZE)
     NAME="$STARTLINE"_inputs
     echo "$OUTPUT_DIR/$NAME.err"
-    sbatch -J $NAME -e $OUTPUT_DIR/25May2022_$NAME.err -o $OUTPUT_DIR/25May2022_$NAME.out biospectral/run_script.sh -i "$INPUTS" -o $OUTPUT_DIR
+    sbatch -J $NAME -e $OUTPUT_DIR/$NAME.err -o $OUTPUT_DIR/$NAME.out biospectral/run_script.sh -i "$INPUTS" -o $OUTPUT_DIR
 done
