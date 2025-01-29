@@ -8,8 +8,6 @@ import matplotlib
 import itertools
 from tqdm import tqdm
 matplotlib.rcParams['pdf.fonttype'] = 42
-
-# from spectranalysis.utils import *
 from joblib import Parallel, delayed
 
 def remove_consecutive_ints (int_ls, method='keep_first'):
@@ -203,19 +201,6 @@ def get_ksi (mat):
     pinvS = np.linalg.pinv(mat)
     ksi = 1/(np.sqrt(np.sum(mat**2, axis=0) * np.sum( (pinvS**2).transpose(), axis=0)))
     return ksi
-
-# def get_ksi_pairwise (mat,eps = 1e-8):
-#     """
-#     mat (np.array): matrix with shape Jx2 where J is the number of wavelengths and k is 
-#         the number of spectra
-#     """
-#     # if there is no overlap between spectra
-#     if np.sum(mat[0,:] * mat[1,:]) < eps:
-#         return 1
-#     else:
-#         pinvS = np.linalg.pinv(mat)
-#         ksi = 1/(np.sqrt(np.sum(mat**2, axis=0) * np.sum( (pinvS**2).transpose(), axis=0)))
-#     return ksi
 
 def get_ksi_pairwise (arr1, arr2):
     """
