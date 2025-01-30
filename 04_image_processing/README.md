@@ -21,3 +21,6 @@ To install the required dependencies, run the following command in your terminal
 pip install -r requirements.txt
 ```
 
+## Notebooks
+
+The notebooks contain examples for loading, processing, and running analyses on hyperspectral datacubes
