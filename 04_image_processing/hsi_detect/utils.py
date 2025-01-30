@@ -650,7 +650,6 @@ def kmeans_hierarchical_extract_endmembers(img, reference_spec=None,
         clustering_method = MiniBatchKMeans
 
     assert len(reference_spec) == img.shape[-1]
-
     em_ls, clust_ls, img_flattened = cluster_based_extract_endmembers(img, n_clusters, reduced_dims=reduced_dims, return_cluster_idxs=True, 
                                                                       return_flattened_img=True, clustering_method=clustering_method, norm=norm, 
                                                                       **kmeans_clustering_kwargs)
@@ -818,3 +817,302 @@ def get_local_ip():
     except Exception as e:
         print(f"Error: {e}")
         return None
+
+import base64
+from io import BytesIO
+from PIL import Image
+
+def stringify_image(img):
+  pil_img = Image.fromarray(img)
+  buffer = BytesIO()
+  pil_img.save(buffer, format="PNG")
+  img_str = base64.b64encode(buffer.getvalue()).decode("utf-8")
+  return f"data:image/png;base64,{img_str}"
+
+def make_juxtaposed_html(img1, img2, height=1000):
+    if not isinstance(img1, str):
+        img1 = stringify_image(img1)
+
+    if not isinstance(img2, str):
+        img2 = stringify_image(img2)
+
+    html_code = f'''
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>Juxtapose Slider with Colorbar</title>
+      <script src="https://cdn.knightlab.com/libs/juxtapose/latest/js/juxtapose.min.js"></script>
+      <link rel="stylesheet" href="https://cdn.knightlab.com/libs/juxtapose/latest/css/juxtapose.css">
+      <style>
+      body {{
+      font-family: sans-serif;
+      }}
+      #container {{
+      width: 600px;
+      margin: auto;
+      }}
+      #colorbar {{
+      width: 100%;
+      height: 30px; /* Increased height to accommodate the triangle handles */
+      margin-top: 10px;
+      position: relative;
+      cursor: pointer;
+      }}
+      .marker {{
+      position: absolute;
+      top: 0;
+      width: 2px;
+      height: 20px;
+      background-color: black;
+      }}
+      .handle {{
+      position: absolute;
+      top: 20px;
+      width: 0;
+      height: 0;
+      border-left: 5px solid transparent;
+      border-right: 5px solid transparent;
+      border-bottom: 10px solid black; /* Flipped triangle */
+      cursor: pointer;
+      }}
+      .slider-container {{
+      text-align: center;
+      margin-top: 10px;
+      }}
+      .classification-score {{
+      text-align: center;
+      margin-top: 10px;
+      }}
+      </style>
+    </head>
+    <body>
+      <div id="container">
+      <div id="foo" style="width: 95%; height: {height}px; margin: 1px;"></div>
+      <!-- Colorbar Canvas -->
+      <canvas id="colorbar"></canvas>
+
+      <!-- Min/Max Values Display -->
+      <div class="classification-score"> Classification score </div>
+      <div class="classification-score"> drag to set min. and max. value to tune sensitivity/selectivity</div>
+      <div class="slider-container">
+      <span id="minValue">Min: 0.00</span>
+      <span id="maxValue">Max: 255.00</span>
+      </div>
+      </div>
+
+      <script>
+      let img2Original = "{img2}";
+      let slider;
+      let debounceTimeout;
+
+      // Min and Max marker positions (0-255 scale)
+      let minVal = 0;
+      let maxVal = 255;
+
+      // Dragging state
+      let dragging = null; // 'min' or 'max'
+      let colorbarCanvas;
+      let colorbarCtx;
+
+      // Debounce function to limit rapid updates
+      function debouncedUpdateColorbar() {{
+      clearTimeout(debounceTimeout); // Clear any existing timeout
+      debounceTimeout = setTimeout(updateColorbar, 200); // Wait 200ms before calling updateColorbar
+      }}
+
+      // Draw the colorbar with min and max markers
+      function drawColorbar() {{
+      const canvas = document.getElementById('colorbar');
+      const ctx = canvas.getContext('2d');
+      const width = canvas.width = 600;
+      const height = canvas.height = 30;
+
+      // Clear the canvas
+      ctx.clearRect(0, 0, width, height);
+
+      // Draw the gradient
+      const gradient = ctx.createLinearGradient(0, 0, width, 0);
+      for (let i = 0; i <= 1; i += 0.1) {{
+      let value = i * 255;
+      let color = `rgb(${{value}}, ${{value}}, ${{value}})`; // Simple colormap
+      gradient.addColorStop(i, color);
+      }}
+      ctx.fillStyle = gradient;
+      ctx.fillRect(0, 0, width, 20); // Gradient only in the top 20px
+
+      // Draw min and max markers
+      const minX = (minVal / 255) * width;
+      const maxX = (maxVal / 255) * width;
+
+      // Min marker
+      ctx.fillStyle = 'black';
+      ctx.fillRect(minX - 1, 0, 2, 20); // Vertical line
+
+      ctx.fillStyle = 'white'; // White fill
+      ctx.strokeStyle = 'black'; // Black border
+      ctx.beginPath();
+      ctx.moveTo(minX, 20); // Tip of the triangle at the vertical line
+      ctx.lineTo(minX - 5, 30); // Base left
+      ctx.lineTo(minX + 5, 30); // Base right
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke(); // Triangle handle
+
+      // Max marker
+      ctx.fillStyle = 'black';
+      ctx.fillRect(maxX - 1, 0, 2, 20); // Vertical line
+
+      ctx.fillStyle = 'gray'; // Gray fill
+      ctx.strokeStyle = 'black'; // Black border
+      ctx.beginPath();
+      ctx.moveTo(maxX, 20); // Tip of the triangle at the vertical line
+      ctx.lineTo(maxX - 5, 30); // Base left
+      ctx.lineTo(maxX + 5, 30); // Base right
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke(); // Triangle handle
+      }}
+
+      // Update the image based on min and max values
+      function updateImageRange(imgSrc, minVal, maxVal, callback) {{
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      const img = new Image();
+      
+      img.crossOrigin = "anonymous";  // Allow cross-origin images if needed
+      img.src = imgSrc;
+
+      img.onload = function () {{
+      // Set canvas size to image size
+      canvas.width = img.width;
+      canvas.height = img.height;
+
+      // Draw image onto canvas
+      ctx.drawImage(img, 0, 0);
+
+      // Get image data
+      const imageData = ctx.getImageData(0, 0, img.width, img.height);
+      const data = imageData.data;
+
+      // Loop through pixels (grayscale image, R=G=B)
+      for (let i = 0; i < data.length; i += 4) {{
+        let grayscale = data[i];  // Use Red channel (same for G and B)
+
+        if (grayscale < minVal) {{
+        grayscale = 0;  // Clamp to min
+        }} else if (grayscale > maxVal) {{
+        grayscale = 255;  // Clamp to max
+        }}
+        else {{
+        grayscale = (grayscale - minVal) / maxVal * 255
+        }}
+
+        // Apply new grayscale value
+        data[i] = data[i + 1] = data[i + 2] = grayscale;
+      }}
+
+      // Update canvas with modified pixel data
+      ctx.putImageData(imageData, 0, 0);
+
+      // Convert modified canvas to image URL and pass it to the callback
+      callback(canvas.toDataURL());
+      }};
+      }}
+
+      // Update the colorbar and image
+      function updateColorbar() {{
+      document.getElementById('minValue').textContent = `Min: ${{ (minVal/255).toFixed(2) }}`;
+      document.getElementById('maxValue').textContent = `Max: ${{ (maxVal/255).toFixed(2) }}`;
+
+      drawColorbar();
+
+      // Store the current position of the slider
+      const currentPosition = slider ? slider.getPosition() : 50;
+
+      // Update img2 based on the slider values
+      updateImageRange(img2Original, minVal, maxVal, function(updatedImage) {{
+      const sliderContainer = document.getElementById('foo');
+      sliderContainer.innerHTML = ''; // Clear previous slider
+
+      slider = new juxtapose.JXSlider('#foo',
+        [
+        {{
+        src: "{img1}",
+        label: 'RGB',
+        }},
+        {{
+        src: updatedImage,
+        label: 'Processed HSI',
+        }}
+        ],
+        {{
+        animate: true,
+        showLabels: true,
+        showCredits: true,
+        startingPosition: currentPosition + "%",
+        makeResponsive: true
+        }}
+      );
+      }});
+      }}
+
+      // Handle mouse events for dragging markers
+      function handleMouseDown(event) {{
+      const rect = colorbarCanvas.getBoundingClientRect();
+      const x = event.clientX - rect.left;
+      const minX = (minVal / 255) * colorbarCanvas.width;
+      const maxX = (maxVal / 255) * colorbarCanvas.width;
+
+      // Check if the user clicked near the min or max marker
+      if (Math.abs(x - minX) < 10) {{
+      dragging = 'min';
+      }} else if (Math.abs(x - maxX) < 10) {{
+      dragging = 'max';
+      }}
+      }}
+
+      function handleMouseMove(event) {{
+      if (dragging) {{
+      const rect = colorbarCanvas.getBoundingClientRect();
+      const x = event.clientX - rect.left;
+      const newVal = Math.min(255, Math.max(0, Math.round((x / colorbarCanvas.width) * 255)));
+
+      if (dragging === 'min' && newVal < maxVal) {{
+        minVal = newVal;
+      }} else if (dragging === 'max' && newVal > minVal) {{
+        maxVal = newVal;
+      }}
+
+      // Update the colorbar in real-time while dragging
+      drawColorbar();
+      }}
+      }}
+
+      function handleMouseUp() {{
+      if (dragging) {{
+      // Only update the image when dragging stops
+      updateColorbar();
+      }}
+      dragging = null;
+      }}
+
+      // Initialize colorbar and event listeners
+      window.onload = function () {{
+      colorbarCanvas = document.getElementById('colorbar');
+      colorbarCtx = colorbarCanvas.getContext('2d');
+
+      // Add event listeners for dragging markers
+      colorbarCanvas.addEventListener('mousedown', handleMouseDown);
+      colorbarCanvas.addEventListener('mousemove', handleMouseMove);
+      colorbarCanvas.addEventListener('mouseup', handleMouseUp);
+
+      // Draw the initial colorbar
+      updateColorbar();
+      }};
+      </script>
+    </body>
+    </html>
+    '''
+    return html_code

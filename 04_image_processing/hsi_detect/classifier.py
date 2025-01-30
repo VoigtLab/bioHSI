@@ -41,15 +41,17 @@ class HierarchicalKMeansUnmixer(HSIClassifier):
     self.metric = metric
     self.linkage = linkage
     self.distance_threshold = distance_threshold
-    self.normalize = normalize
+    self.normalize = normalize    
     self.em_ls = self.clust_ls = None
   
   def fit(self, image: image.HyperspectralImage, reference_spec: spectrum.Spectrum):
     self.image = image.image
     self.reference_spec = reference_spec
     self.flattened_image = image.flatten()
+    if self.normalize:
+      self.flattened_image = self.flattened_image / np.nanmax(self.flattened_image, axis=1, keepdims=True)
     self.em_ls, self.clust_ls = kmeans_hierarchical_extract_endmembers(self.flattened_image, reference_spec=reference_spec.intensities,
-                                                             reduced_dims=self.reduced_dims, n_clusters=self.n_init_clusters, 
+                                                             reduced_dims=self.reduced_dims, n_clusters=self.n_init_clusters, norm=self.normalize,
                                                              filter_threshold=self.filter_threshold, metric=self.metric,
                                                              linkage=self.linkage, distance_threshold=self.distance_threshold,
                                                              return_cluster_idxs=True
