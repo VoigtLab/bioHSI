@@ -8,9 +8,8 @@ The code is organized into directories that represent standalone modules for the
  ### Directories:
  - `01_biochemical_network`: Scripts and notebooks to process biomolecular reaction databases,
  extract metabolites, define host metabolomes, construct biochemical reaction network
- and perform shortest path search to assess ease of biosynthesis of heterolous metabolites 
- - `02_spectral_prediction`: Scripts to run TD-DFT spectral prediction pipeline to go 
- from metabolite structures to predicted spectra. 
+ and perform shortest path search to assess ease of biosynthesis of heterologous metabolites 
+ - `02_spectral_prediction`: Scripts to run TD-DFT spectral prediction pipeline to get from metabolite structures to predicted spectra. 
  - `03_reporter_ranking`: Scripts to compute the uniqueness of molecules compared to other
  metabolites and to compute contrast to hyperspectral images. Also contains benchmarking scripts.
  - `04_image_processing`: Scripts to classify presence of reporter in experimentally collected hyperspectral images.
