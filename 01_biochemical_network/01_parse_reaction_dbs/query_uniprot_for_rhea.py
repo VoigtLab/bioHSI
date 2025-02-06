@@ -4,12 +4,12 @@ import requests
 import re
 from tqdm import tqdm
 
-rhea_2_uniprot = pd.read_csv('../00_data/rhea/rhea2uniprot_sprot.tsv', sep='\t')
+rhea_2_uniprot = pd.read_csv('../00_data/raw/rhea/rhea2uniprot_sprot.tsv', sep='\t')
 
 uniprot_accessions = rhea_2_uniprot['ID'].tolist()
 
 #check if its already_queried 
-with open('protein_id_to_sequence.json','r') as f:
+with open('../00_data/processed/protein_id_to_sequence.json','r') as f:
     uniprot2seq = json.load(f)
 
 uniprot_accessions = [u for u in uniprot_accessions if u not in uniprot2seq.keys()]

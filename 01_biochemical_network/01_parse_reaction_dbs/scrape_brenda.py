@@ -49,7 +49,7 @@ class BrendaPage():
         self.substrate_table_info = res_list
 
 # Flatfile downloaded from Brenda website
-with open('../00_data/raw/brenda_2023_1.json','r') as f:
+with open('../00_data/raw/brenda/brenda_2023_1.json','r') as f:
     brenda_flatfile = json.load(f)
 
 ec_numbers = list(brenda_flatfile['data'].keys())

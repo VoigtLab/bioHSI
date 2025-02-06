@@ -6,7 +6,7 @@ from tqdm import tqdm
 import numpy as np
 import json
 
-bkms_reactions = pd.read_csv('1Sep2023_bkms-mapped.txt',sep='\t')
+bkms_reactions = pd.read_csv('../00_data/raw/bkms/1Sep2023_bkms-mapped.txt',sep='\t')
 kegg_rids = bkms_reactions['Reaction_ID_KEGG'].drop_duplicates().tolist()
 outfile = 'kegg_reaction_pages.txt'
 

@@ -5,11 +5,15 @@ import os
 from tqdm import tqdm
 
 PID_TO_SEQUENCE_FILE = '../00_data/processed/brenda/20Nov2023_protein_id_to_sequence.json'
+EXISTING_FILE = '../00_data/processed/brenda/scraped_brenda_substrate_results.json'
 
-with open('../00_data/processed/brenda/scraped_brenda_substrate_results.json', 'r') as f:
-    parsed_brenda = json.load(f)
-for ec in parsed_brenda.keys():
-    parsed_brenda[ec] = pd.DataFrame(parsed_brenda[ec])
+if os.path.exists(EXISTING_FILE):
+    with open(EXISTING_FILE, 'r') as f:
+        parsed_brenda = json.load(f)
+    for ec in parsed_brenda.keys():
+        parsed_brenda[ec] = pd.DataFrame(parsed_brenda[ec])
+else:
+    parsed_brenda = {}
 
 uniprot_accessions = set()
 for ec in parsed_brenda:
