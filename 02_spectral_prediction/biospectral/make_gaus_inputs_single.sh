@@ -6,7 +6,7 @@ BASIS="6-31g(d)"
 MEM=16
 CPUS=10
 IN_EXT="coord"
-GAU_OUTPUT_DIR="/nobackup1c/users/itail/"
+GAU_OUTPUT_DIR=""
 OVERWRITE=false
 
 while (( $# )); do

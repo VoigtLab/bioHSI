@@ -1,5 +1,7 @@
 #!bin/bash
 
+#The variable TMPDIR may need to be set
+
 # Runs the pipeline from SMILES through the TD-DFT simulation for one molecule.
 
 while getopts i:n:s:o:m:c:f: option
@@ -26,7 +28,7 @@ bash biospectral/make_gaus_inputs_single.sh --name $NAME -i $INPUT_DIR -o $INPUT
 echo "...done refining 3D structure and making Gaussian input file"
 
 echo "Redefining Gaussian input file for supercloud..."
-bash biospectral/make_diff_functional_inputs_single.sh --name $NAME -i $INPUT_DIR -o $INPUT_DIR --gau-output-dir "/home/gridsan/itail/scratch/gaussian/" --mem $MEM --cpus $CPUS -f $FUNCTIONAL
+bash biospectral/make_diff_functional_inputs_single.sh --name $NAME -i $INPUT_DIR -o $INPUT_DIR --gau-output-dir $TMPDIR --mem $MEM --cpus $CPUS -f $FUNCTIONAL
 echo "...done redefining Gaussian input file for supercloud"
 
 echo "Running TD-DFT simulation..."
